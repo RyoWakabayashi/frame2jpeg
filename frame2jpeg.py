@@ -22,7 +22,7 @@ def parse_args():
         ヘルプ:
             python frame2jpeg.py -h
         フレーム保存:
-            python frame2jpeg.py -v sample.mp4 -c sample.csv [-r out]
+            python frame2jpeg.py -v sample.mp4 -c sample.csv [-t frame_num] [-r out]
         """
     )
     parser = argparse.ArgumentParser(usage=usage)
@@ -33,6 +33,10 @@ def parse_args():
     parser.add_argument(
         "-c", "--csv", type=str, required=True,
         help="path to input csv file."
+    )
+    parser.add_argument(
+        "-t", "--title", type=str, default="frame_num",
+        help="frame number column title."
     )
     parser.add_argument(
         "-o", "--output", type=str, default="out",
@@ -63,18 +67,29 @@ def main(args):
     :param args: 引数
     """
 
+    if not os.path.isfile(args.video):
+        print(f'"{args.video}" not found.')
+        return
+
+    if not os.path.isfile(args.csv):
+        print(f'"{args.csv}" not found.')
+        return
+
     capture = cv2.VideoCapture(args.video)
     if not capture.isOpened():
         print("Can't open video file.")
         return
 
-    os.makedirs(args.output, exist_ok=True)
-
     frame_df = pd.read_csv(args.csv)
+    if not args.title in frame_df.columns:
+        print(f'CSV column "{args.title}" not found. Please check CSV file or --title option.')
+        return
+
+    os.makedirs(args.output, exist_ok=True)
 
     for _, row in tqdm(frame_df.iterrows(), total=len(frame_df)):
 
-        frame_num = row["frame_num"]
+        frame_num = row[args.title]
 
         output_filename = os.path.splitext(args.video)[0] + "_" + str(frame_num).zfill(6) + ".jpg"
 
